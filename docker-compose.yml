@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  bugzilla:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8099:80"
+    volumes:
+      - bugzilla_data:/var/www/bugzilla
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bugzilla
+      MYSQL_USER: bugzilla
+      MYSQL_PASSWORD: bugzilla
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  bugzilla_data:
+  db_data:
