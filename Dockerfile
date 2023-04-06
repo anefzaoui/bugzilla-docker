@@ -46,24 +46,23 @@ RUN a2enmod headers
 RUN a2enmod rewrite
 
 # Create an Apache virtual host configuration for Bugzilla
-RUN bash -c 'cat > /etc/apache2/sites-available/bugzilla.conf << EOL
-<VirtualHost *:80>
-    ServerAdmin webmaster@localhost
-    DocumentRoot /var/www/bugzilla
-    ServerName bugzilla.bugzilla
+RUN echo '<VirtualHost *:80>' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    ServerAdmin webmaster@localhost' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    DocumentRoot /var/www/bugzilla' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    ServerName bugzilla.bugzilla' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    ErrorLog \${APACHE_LOG_DIR}/error.log' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    CustomLog \${APACHE_LOG_DIR}/access.log combined' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    <Directory /var/www/bugzilla>' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '        AddHandler cgi-script .cgi' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '        Options +ExecCGI' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '        DirectoryIndex index.cgi' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '        AllowOverride All' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '        Require all granted' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    </Directory>' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '</VirtualHost>' >> /etc/apache2/sites-available/bugzilla.conf
 
-    ErrorLog \${APACHE_LOG_DIR}/error.log
-    CustomLog \${APACHE_LOG_DIR}/access.log combined
-
-    <Directory /var/www/bugzilla>
-        AddHandler cgi-script .cgi
-        Options +ExecCGI
-        DirectoryIndex index.cgi
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-EOL'
 
 # Enable the Bugzilla site and restart Apache
 RUN a2ensite bugzilla
