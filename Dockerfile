@@ -46,13 +46,10 @@ RUN a2enmod headers
 RUN a2enmod rewrite
 
 # Create an Apache virtual host configuration for Bugzilla
+# Create an Apache virtual host configuration for Bugzilla
 RUN echo '<VirtualHost *:80>' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '    ServerAdmin webmaster@localhost' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    DocumentRoot /var/www/bugzilla' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    ServerName bugzilla.bugzilla' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    ErrorLog \${APACHE_LOG_DIR}/error.log' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    CustomLog \${APACHE_LOG_DIR}/access.log combined' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    DocumentRoot /var/www' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '    <Directory /var/www/bugzilla>' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '        AddHandler cgi-script .cgi' >> /etc/apache2/sites-available/bugzilla.conf \
@@ -61,8 +58,8 @@ RUN echo '<VirtualHost *:80>' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '        AllowOverride All' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '        Require all granted' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '    </Directory>' >> /etc/apache2/sites-available/bugzilla.conf \
+    && echo '    Alias /bugzilla /var/www/bugzilla' >> /etc/apache2/sites-available/bugzilla.conf \
     && echo '</VirtualHost>' >> /etc/apache2/sites-available/bugzilla.conf
-
 
 # Enable the Bugzilla site and restart Apache
 RUN a2ensite bugzilla
