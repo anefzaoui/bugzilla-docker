@@ -74,6 +74,7 @@ RUN sed -i "s/\$db_name = 'bugs';/\$db_name = 'bugzilla';/" localconfig
 RUN sed -i "s/\$db_user = 'bugs';/\$db_user = 'bugzilla';/" localconfig
 RUN sed -i "s/\$db_pass = '';/\$db_pass = 'bugzilla';/" localconfig
 RUN sed -i "s/\$webservergroup = 'apache';/\$webservergroup = 'www-data';/" localconfig
+RUN sed -i "s/\$db_host = 'localhost';/\$db_host = 'db';/" localconfig
 
 # Set ownership and permissions
 RUN chown -R www-data:www-data /var/www/bugzilla
@@ -83,4 +84,5 @@ RUN chmod -R 755 /var/www/bugzilla
 COPY checksetup_answers.txt /var/www/bugzilla/checksetup_answers.txt
 RUN perl checksetup.pl /var/www/bugzilla/checksetup_answers.txt
 
-CMD ["apache2ctl", "-DFOREGROUND"]
+COPY wait-for-mysql.sh /wait-for-mysql.sh
+CMD ["/wait-for-mysql.sh", "db", "apache2ctl", "-DFOREGROUND"]
