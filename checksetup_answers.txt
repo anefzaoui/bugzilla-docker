@@ -1,4 +1,4 @@
 # Enter your email address, real name, and password for the Bugzilla admin account
-ADMIN_EMAIL=hello@itqanlabs.com
-ADMIN_NAME=Admin User
-ADMIN_PASSWORD=buggy
+$answer{'ADMIN_EMAIL'} = 'hello@itqanlabs.com';
+$answer{'ADMIN_NAME'} = 'Admin User';
+$answer{'ADMIN_PASSWORD'} = 'buggy';
