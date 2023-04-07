@@ -10,7 +10,8 @@ services:
     volumes:
       - bugzilla_data:/var/www/bugzilla
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:5.7
@@ -21,6 +22,11 @@ services:
       MYSQL_PASSWORD: bugzilla
     volumes:
       - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   bugzilla_data:

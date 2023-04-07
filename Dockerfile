@@ -79,10 +79,10 @@ RUN sed -i "s/\$db_host = 'localhost';/\$db_host = 'db';/" localconfig
 # Set ownership and permissions
 RUN chown -R www-data:www-data /var/www/bugzilla
 RUN chmod -R 755 /var/www/bugzilla
+USER www-data
 
 # Run the final checksetup with input parameters
 COPY checksetup_answers.txt /var/www/bugzilla/checksetup_answers.txt
 RUN perl checksetup.pl /var/www/bugzilla/checksetup_answers.txt
 
-COPY wait-for-mysql.sh /wait-for-mysql.sh
-CMD ["/wait-for-mysql.sh", "db", "apache2ctl", "-DFOREGROUND"]
+CMD ["db", "apache2ctl", "-DFOREGROUND"]
