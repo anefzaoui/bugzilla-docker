@@ -1,33 +1,34 @@
-version: "3.9"
+version: '3.8'
 
 services:
   bugzilla:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
-      - "8099:80"
-    volumes:
-      - bugzilla_data:/var/www/bugzilla
+      - "80:80"
+    environment:
+      BUGZILLA_DB_HOST: db
+      BUGZILLA_DB_NAME: bugzilla
+      BUGZILLA_DB_USER: bugzilla
+      BUGZILLA_DB_PASS: mysecretpassword
+      BUGZILLA_ADMIN_EMAIL: admin@example.com
+      BUGZILLA_ADMIN_PASS: anothersecretpassword
+      BUGZILLA_ADMIN_REALNAME: "Admin User"
+      SERVERNAME: "http://localhost"
+      SERVERADMIN_EMAIL: "webmaster@example.com"
+      POSTFIX_HOSTNAME: "example.com"
+      POSTFIX_NETWORKS: "172.0.0.0/8 192.168.0.0/16"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
 
   db:
     image: mysql:5.7
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: bugzilla
       MYSQL_USER: bugzilla
-      MYSQL_PASSWORD: bugzilla
+      MYSQL_PASSWORD: mysecretpassword
     volumes:
-      - db_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-uroot", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - mysql-data:/var/lib/mysql
 
 volumes:
-  bugzilla_data:
-  db_data:
+  mysql-data:

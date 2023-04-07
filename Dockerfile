@@ -1,88 +1,115 @@
-FROM ubuntu:22.04
+FROM ubuntu:20.04
+LABEL maintainer="Stefan Pielmeier <stefan@symlinux.com>"
+LABEL version 0.2
+LABEL description="Docker image for bugzilla on Ubuntu 20.04 using PerlCGI/Apache2"
 
-# Update package list and upgrade packages
-RUN apt-get update && apt-get upgrade -y
+ENV bugzilla_branch=release-5.0-stable
+ENV APACHE_USER=www-data
 
-# Install required packages
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y debconf-utils wget perl build-essential libssl-dev libexpat1-dev libmysqlclient-dev libgd-dev libxml2-dev libxslt1-dev libnet-ldap-perl libdbi-perl libdbd-mysql-perl git nano libcgi-pm-perl libdigest-sha-perl libtimedate-perl libdatetime-perl libdatetime-timezone-perl libdbix-connector-perl libtemplate-perl libemail-address-perl libemail-sender-perl libemail-mime-perl liburi-perl liblist-moreutils-perl libmath-random-isaac-perl libjson-xs-perl libgd-perl libchart-perl libtemplate-plugin-gd-perl libgd-text-perl libgd-graph-perl libmime-tools-perl libwww-perl libxml-twig-perl libauthen-sasl-perl libnet-smtp-ssl-perl libauthen-radius-perl libsoap-lite-perl libxmlrpc-lite-perl libjson-rpc-perl libtest-taint-perl libhtml-parser-perl libhtml-scrubber-perl libencode-perl libencode-detect-perl libemail-reply-perl libhtml-formattext-withlinks-perl libtheschwartz-perl libdaemon-generic-perl libapache2-mod-perl2 libapache2-mod-perl2-dev libfile-mimeinfo-perl libio-stringy-perl libcache-memcached-perl libfile-copy-recursive-perl libfile-which-perl perlmagick lynx graphviz python3-sphinx rst2pdf
+# disable prompt during package install
+ARG DEBIAN_FRONTEND=noninteractive
 
-# Download Bugzilla
-ENV BUGZILLA_VERSION 5.0.6
-RUN wget https://ftp.mozilla.org/pub/mozilla.org/webtools/bugzilla-$BUGZILLA_VERSION.tar.gz
+##################
+##   BUILDING   ##
+##################
 
-# Extract Bugzilla
-RUN tar xf bugzilla-$BUGZILLA_VERSION.tar.gz
+WORKDIR /
 
-RUN mkdir -p /var/www/
+# Prerequisites
+RUN apt update
+RUN apt-get upgrade -y
+RUN apt-get install -y \
+      vim \
+      bash \
+      supervisor \
+      libappconfig-perl \
+      libdate-calc-perl \
+      libtemplate-perl \
+      libmime-tools-perl \
+      build-essential \
+      libdatetime-timezone-perl \
+      libdatetime-perl \
+      libemail-sender-perl \
+      libemail-mime-perl \
+      libemail-mime-perl \
+      libdbi-perl \
+      libdbd-mysql-perl \
+      libcgi-pm-perl \
+      libmath-random-isaac-perl \
+      libmath-random-isaac-xs-perl \
+      libapache2-mod-perl2 \
+      libapache2-mod-perl2-dev \
+      libchart-perl \
+      libxml-perl \
+      libxml-twig-perl \
+      perlmagick \
+      libgd-graph-perl \
+      libtemplate-plugin-gd-perl \
+      libsoap-lite-perl \
+      libhtml-scrubber-perl \
+      libjson-rpc-perl \
+      libdaemon-generic-perl \
+      libtheschwartz-perl \
+      libtest-taint-perl \
+      libauthen-radius-perl \
+      libfile-slurp-perl \
+      libencode-detect-perl \
+      libmodule-build-perl \
+      libnet-ldap-perl \
+      libfile-which-perl \
+      libauthen-sasl-perl \
+      libfile-mimeinfo-perl \
+      libhtml-formattext-withlinks-perl \
+      libgd-dev \
+      libcache-memcached-perl \
+      libfile-copy-recursive-perl \
+      libdbd-sqlite3-perl \
+      libmysqlclient-dev \
+      graphviz \
+      sphinx-common \
+      rst2pdf \
+      libemail-address-perl \
+      libemail-reply-perl \
+      apache2 \
+      postfix \
+      git
+RUN rm -rf /var/lib/apt/lists/*
+RUN apt clean
 
-# Move Bugzilla to the /var/www directory
-RUN mv bugzilla-$BUGZILLA_VERSION /var/www/
+# prepare the entrypoint script just to start the supervisord
+ADD entrypoint.sh /entrypoint.sh
+RUN chmod 700 /entrypoint.sh
+ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN chmod 700 /etc/supervisor/conf.d/supervisord.conf
 
-RUN mv /var/www/bugzilla-$BUGZILLA_VERSION /var/www/bugzilla
-
-# Install Perl modules
-WORKDIR /var/www/bugzilla
-RUN perl checksetup.pl --check-modules
-
-RUN perl install-module.pl DateTime
-RUN perl install-module.pl DateTime::TimeZone
-RUN perl install-module.pl Template
-RUN perl install-module.pl Email::Sender
-RUN perl install-module.pl Email::MIME
-RUN perl install-module.pl List::MoreUtils
-RUN perl install-module.pl Math::Random::ISAAC
-RUN perl install-module.pl JSON::XS
-RUN perl install-module.pl ExtUtils::PkgConfig module
-
-RUN perl install-module.pl --all
-
-# Set up the web server
-RUN apt-get install -y apache2 libapache2-mod-perl2
-
-# Enable required Apache modules
-RUN a2enmod cgi
-RUN a2enmod expires
-RUN a2enmod headers
-RUN a2enmod rewrite
-
-# Create an Apache virtual host configuration for Bugzilla
-# Create an Apache virtual host configuration for Bugzilla
-RUN echo '<VirtualHost *:80>' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    ServerAdmin webmaster@localhost' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    DocumentRoot /var/www' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    <Directory /var/www/bugzilla>' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '        AddHandler cgi-script .cgi' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '        Options +ExecCGI' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '        DirectoryIndex index.cgi' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '        AllowOverride All' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '        Require all granted' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    </Directory>' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '    Alias /bugzilla /var/www/bugzilla' >> /etc/apache2/sites-available/bugzilla.conf \
-    && echo '</VirtualHost>' >> /etc/apache2/sites-available/bugzilla.conf
-
-# Enable the Bugzilla site and restart Apache
-RUN a2ensite bugzilla
-RUN service apache2 start
+# for apache2 web server
+EXPOSE 80
+RUN a2enmod cgid && a2enmod rewrite && a2enmod headers && a2enmod expires
+ADD bugzilla.conf /etc/apache2/conf-available
+RUN a2enconf bugzilla
 
 
-# Run the Bugzilla setup
-RUN perl checksetup.pl
+# install bugzilla following https://bugzilla.readthedocs.io/en/5.0/installing/linux.html
+WORKDIR /var/www/html
+RUN git clone --branch ${bugzilla_branch} https://github.com/bugzilla/bugzilla
+RUN perl -MCPAN -e "install CPAN"
 
-# Configure Bugzilla localconfig file
-RUN sed -i "s/\$db_name = 'bugs';/\$db_name = 'bugzilla';/" localconfig
-RUN sed -i "s/\$db_user = 'bugs';/\$db_user = 'bugzilla';/" localconfig
-RUN sed -i "s/\$db_pass = '';/\$db_pass = 'bugzilla';/" localconfig
-RUN sed -i "s/\$webservergroup = 'apache';/\$webservergroup = 'www-data';/" localconfig
-RUN sed -i "s/\$db_host = 'localhost';/\$db_host = 'db';/" localconfig
+# ensure bugzilla installation and Perl is all right, this may take some time
+WORKDIR /var/www/html/bugzilla
+RUN ./checksetup.pl --check-modules # generates a perl module check
+RUN ./install-module.pl --all  # installes missing perl modules
+ADD perl_patch /tmp/perl_patch
+# needed to fix Perl5 issue #17271,
+# see https://stackoverflow.com/questions/56475712/getting-undefined-subroutine-utf8swashnew-called-at-bugzilla-util-pm-line-109
+RUN patch -u /usr/share/perl/5.30.0/Safe.pm -i /tmp/perl_patch 
+# now we can continue with normal setup
+RUN ./checksetup.pl  # generates localconfig file
 
-# Set ownership and permissions
-RUN chown -R www-data:www-data /var/www/bugzilla
-RUN chmod -R 755 /var/www/bugzilla
-USER www-data
+# make the images available for backup and restore
+VOLUME /var/www/html/bugzilla/images
+VOLUME /var/www/html/bugzilla/data 
+VOLUME /var/www/html/bugzilla/lib
 
-# Run the final checksetup with input parameters
-COPY checksetup_answers.txt /var/www/bugzilla/checksetup_answers.txt
-RUN perl checksetup.pl /var/www/bugzilla/checksetup_answers.txt
-
-CMD ["db", "apache2ctl", "-DFOREGROUND"]
+# start the supervisord
+WORKDIR /tmp
+CMD ["/entrypoint.sh"]
